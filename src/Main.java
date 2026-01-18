@@ -7,7 +7,7 @@ import java.util.Scanner;
 
 public class Main {
 
-    public static void main (String[] args) throws IOException {
+    public static void main (String[] args) throws LineUnavailableException, IOException {
 
         Scanner scanner = new Scanner(System.in);
         String filePath = getSongPath(scanner);
@@ -28,18 +28,29 @@ public class Main {
             String response = "";
 
             while (!response.equals("Q")) {
+                System.out.println("**********");
                 System.out.println("P = Play");
                 System.out.println("S = Stop");
                 System.out.println("R = Restart");
                 System.out.println("C = Change song");
                 System.out.println("V = Volume control");
+                System.out.println("F = Forward time (10s)");
+                System.out.println("B = Backtrack time (10s)");
                 System.out.println("Q = Quit");
+                System.out.println("**********");
                 response = scanner.next().toUpperCase();
 
                 switch (response) {
-                    case "P" -> clip.start();
+                    case "P" -> {
+                        remainingTime(clip);
+                        clip.start();
+                    }
                     case "S" -> clip.stop();
-                    case "R" -> clip.setMicrosecondPosition(0);
+                    case "R" -> {
+                        clip.setMicrosecondPosition(0);
+                        clip.start();
+                        remainingTime(clip);
+                    }
                     case "C" -> {
                         clip.stop();
                         filePath = getSongPath(scanner); // Using the method to get a file path according to input
@@ -50,6 +61,16 @@ public class Main {
                     }
                     case "V" -> {
                         decibels = setVolume(decibels, scanner, clip);
+                    }
+                    case "F" -> {
+                        System.out.println("Fast forwarding 10 seconds");
+                        timeControl(10, clip);
+                        remainingTime(clip);
+                    }
+                    case "B" -> {
+                        System.out.println("Back tracking 10 seconds");
+                        timeControl(-10, clip);
+                        remainingTime(clip);
                     }
                     case "Q" -> clip.close();
                     default -> System.out.println("Invalid choice");
@@ -76,7 +97,6 @@ public class Main {
                 } catch (IOException ignored) {}
             }
         }
-
     }
 
     // A method to be used every time the user wants to choose a different song
@@ -85,6 +105,7 @@ public class Main {
         String filePath;
 
         System.out.print("""
+                **********
                 What music would you like to listen to ?
                 1 - Chinese themed background music
                 2 - Cocktail jazz
@@ -93,6 +114,7 @@ public class Main {
                 5 - Classical piano
                 6 - Classical piano 2
                 7 - House music
+                **********
                 """);
         choice = scanner.nextInt();
 
@@ -105,7 +127,7 @@ public class Main {
             case 6 -> filePath = "music\\piano-classical-music-2.wav";
             case 7 -> filePath = "music\\relax-chill-house-music.wav";
             default -> {
-                filePath = "music\\chinese-lunar-new-year.wav";
+                filePath = "music\\chinese-lunar-new-year.wav"; // Defaulting to song number 1
                 System.out.println("Invalid choice, 1 chosen by default");
             }
         }
@@ -124,6 +146,7 @@ public class Main {
         catch(InputMismatchException e) {
             System.out.println("The value you entered is invalid, it must be a float");
         }
+        // Catching decibels going out of their limit
         catch (IllegalArgumentException e) {
             System.out.println("Gain value out of range (-80.0 to 6.0 dB)");
         }
@@ -137,5 +160,20 @@ public class Main {
         }
 
         return decibels;
+    }
+
+    static void remainingTime(Clip clip){
+        // Calculating remaining time and displaying it in seconds
+        long remainingMicroseconds = clip.getMicrosecondLength() - clip.getMicrosecondPosition();
+        double remainingSeconds = (double) remainingMicroseconds / 1000000;
+        String remainingDuration = String.format("%.0f", remainingSeconds);
+        System.out.println("Remaining run time: " + remainingDuration + " seconds");
+    }
+
+    static void timeControl(int changeSeconds, Clip clip){
+
+        long changeMicroseconds = (long) changeSeconds * 1000000; //Converting seconds input to microseconds
+        long currentTime = clip.getMicrosecondPosition();
+        clip.setMicrosecondPosition(currentTime+changeMicroseconds);
     }
 }
